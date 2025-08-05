@@ -48,7 +48,7 @@ digits = torch.reshape(digits, (-1, 28, 28)).cpu().detach().numpy()
 # plot digits
 fig = plt.figure()
 plt.tight_layout()
-plt.suptitle('GMVAE generated samples from the set prior')
+plt.suptitle(f'{args.model} generated samples from the set prior')
 for i in range(n_rows*n_cols):
   plt.subplot(n_rows, n_cols, i+1)
   plt.imshow(digits[i], cmap='gray', interpolation='none')

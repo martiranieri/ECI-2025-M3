@@ -42,7 +42,21 @@ class VAE(nn.Module):
         #
         # Todas las salidas deben ser escalares
         ################################################################################
+        m, v = self.enc(x)
 
+        z = ut.sample_gaussian(m, v)
+
+        logits = self.dec(z)
+
+        rec = -ut.log_bernoulli_with_logits(x, logits).mean() # Monte Carlo
+
+        pm, pv = self.z_prior
+        
+        kl_vector = ut.kl_normal(m, v, pm.expand_as(m), pv.expand_as(v)) # pm y pv deben tener la misma shape que m y v
+
+        kl = kl_vector.mean() # promedio
+
+        nelbo = rec + kl
         ################################################################################
         # Fin de la modificación del código
         ################################################################################

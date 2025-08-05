@@ -40,7 +40,9 @@ def sample_gaussian(m, v):
     # TODO: Modifique/completar el código aquí
     # Muestrea z
     ################################################################################
-
+    raiz_v = torch.sqrt(v + 1e-8) # 1e-8 para evitar que la raíz de cero o números negativos
+    eps = torch.randn_like(m)
+    z = m + raiz_v * eps
     ################################################################################
     # Fin de la modificación del código
     ################################################################################
