@@ -46,8 +46,30 @@ class GMVAE(nn.Module):
         #
         # Las salidas deben ser todas escalares
         ################################################################################
-        # prior aprendible
-        prior = ut.gaussian_parameters(self.z_pre, dim=1)
+        # Prior aprendible
+        m_prior, v_prior = ut.gaussian_parameters(self.z_pre, dim=1)
+
+        # Posterior del encoder
+        m_enc, v_enc = self.enc(x)
+
+        # muestreo z
+        z = ut.sample_gaussian(m_enc, v_enc)
+
+        # expandir prior al tamaño del batch
+        m_prior = m_prior.expand(z.size(0), -1, -1)
+        v_prior = v_prior.expand(z.size(0), -1, -1)
+
+        # reconstrucción
+        logits = self.dec(z)
+        log_pxz = ut.log_bernoulli_with_logits(x, logits) 
+        rec = -torch.mean(log_pxz)
+        
+        # KL (estimador insesgado)
+        log_qzx = ut.log_normal(z, m_enc, v_enc)
+        log_pz = ut.log_normal_mixture(z, m_prior, v_prior) # mezcla de gaussianas
+        kl = torch.mean(log_qzx - log_pz)
+
+        nelbo = kl + rec
 
         ################################################################################
         # Fin de modificación del código

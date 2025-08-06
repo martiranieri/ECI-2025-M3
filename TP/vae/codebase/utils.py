@@ -70,6 +70,17 @@ def log_normal(x, m, v):
     # la última dimensión
     ################################################################################
 
+    log_dos_pi = torch.log(torch.tensor(2.0 * np.pi))
+    
+    log_v = torch.log(v)
+    
+    dist = ((x - m)**2) / v 
+    
+    log_prob_vector = -0.5 * (log_dos_pi + log_v + dist)
+    
+    log_prob = torch.sum(log_prob_vector, dim=-1)
+
+
     ################################################################################
     # Fin de la modificación del código
     ################################################################################
@@ -94,6 +105,13 @@ def log_normal_mixture(z, m, v):
     # en el batch
     ################################################################################
     # expanda z para que coincida la dimensionalidad de m y v
+    z_dim = torch.unsqueeze(z, 1) # para poder usar el expand as
+
+    z_expand = z_dim.expand_as(m)
+
+    log_prob_z = log_normal(z_expand, m, v)
+
+    log_prob = log_mean_exp(log_prob_z, 1)
 
     ################################################################################
     # Fin de la modificación del código
