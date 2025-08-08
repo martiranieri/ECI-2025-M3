@@ -42,8 +42,8 @@ def clasificar_imgs(model, path):
                 counts[pred.item()] += 1
     return counts
 
-vae_dir = '../punto_vae/generated_vae_run00'
-gmvae_dir = '../punto_gmvae/generated_gmvae_run00'
+vae_dir = '../punto_vae/generated_images_run0000'
+gmvae_dir = '../punto_gmvae/generated_images_run0000'
 
 vae_digs = clasificar_imgs(classifier, vae_dir)
 gmvae_digs = clasificar_imgs(classifier, gmvae_dir)
