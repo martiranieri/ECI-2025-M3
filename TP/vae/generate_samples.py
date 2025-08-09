@@ -1,42 +1,68 @@
-from torchmetrics.image.fid import FrechetInceptionDistance
-import torchvision.transforms as T
-from PIL import Image
+# Copyright (c) 2021 Rui Shu
+import argparse
+import numpy as np
 import torch
 import os
+from PIL import Image
+from codebase import utils as ut
+from codebase.models.vae import VAE
+from codebase.models.gmvae import GMVAE
+from pprint import pprint
+from torchvision import datasets, transforms
+import matplotlib.pyplot as plt
 
-fid = FrechetInceptionDistance(feature=2048, normalize=True).to(device)
+parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--z',         type=int, default=10,    help="Number of latent dimensions")
+parser.add_argument('--k',         type=int, default=500,   help="Number mixture components in MoG prior")
+parser.add_argument('--iter_max',  type=int, default=20000, help="Number of training iterations")
+parser.add_argument('--run',       type=int, default=0,     help="Run ID. In case you want to run replicates")
+parser.add_argument('--model',     type=str, choices=['vae', 'gmvae'], help="Model Type", required=True)
+args = parser.parse_args()
+layout = [
+      ('model={:s}', args.model),
+      ('z={:02d}',  args.z)
+  ]
+if args.model == 'gmvae':
+  layout.append(('k={:03d}',  args.k))
+layout.append(('run={:04d}', args.run))
 
-transform = T.Compose([
-    T.Resize(299),        # InceptionV3 espera 299x299
-    T.ToTensor(),
-    T.Normalize(mean=[0.5]*3, std=[0.5]*3),
-])
+model_name = '_'.join([t.format(v) for (t, v) in layout])
+pprint(vars(args))
+print('Model name:', model_name)
 
-def load_images_to_tensor(path, n=None):
-    imgs = []
-    files = [f for f in os.listdir(path) if f.endswith('.png')]
-    if n:
-        files = files[:n]
-    for f in files:
-        img = Image.open(os.path.join(path, f)).convert('RGB')
-        img = transform(img)
-        imgs.append(img)
-    return torch.stack(imgs)
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+model = None 
+if args.model == 'vae':
+  model = VAE
+elif args.model == 'gmvae':
+  model = GMVAE
 
-# Cargá imágenes reales y generadas
-real_images = load_images_to_tensor('../data/mnist_real_test', n=1000)
-vae_images = load_images_to_tensor('../punto_vae/generated_vae_run00', n=1000)
-gmvae_images = load_images_to_tensor('../punto_gmvae/generated_gmvae_run00', n=1000)
+model_ = model(z_dim=args.z, name=model_name).to(device)
+ut.load_model_by_name(model_, global_step=args.iter_max, device=device)
 
-fid.reset()
-fid.update(real_images, real=True)
-fid.update(vae_images, real=False)
-fid_vae = fid.compute().item()
+# sample from priors
+n_rows = 10
+n_cols = 20
+z_sample = model_.sample_z(n_rows*n_cols).to(device)
+digits = model_.sample_x_given(z_sample)
+digits = torch.reshape(digits, (-1, 28, 28)).cpu().detach().numpy()
 
-fid.reset()
-fid.update(real_images, real=True)
-fid.update(gmvae_images, real=False)
-fid_gmvae = fid.compute().item()
+# plot digits
+fig = plt.figure()
+plt.tight_layout()
+plt.suptitle(f'{args.model} generated samples from the set prior')
+for i in range(n_rows*n_cols):
+  plt.subplot(n_rows, n_cols, i+1)
+  plt.imshow(digits[i], cmap='gray', interpolation='none')
+  plt.xticks([])
+  plt.yticks([])
+plt.show()
 
-print(f"FID VAE: {fid_vae}")
-print(f"FID GMVAE: {fid_gmvae}")
+# Crear carpeta
+save_dir = f'./punto_{args.model}/generated_images_run0000'
+os.makedirs(save_dir, exist_ok=True)
+
+# Guardar imágenes
+for idx, img_array in enumerate(digits):
+    img = (img_array * 255).astype(np.uint8)  # convertir a escala de grises uint8
+    Image.fromarray(img).save(f'{save_dir}/sample_{idx:04d}.png')
