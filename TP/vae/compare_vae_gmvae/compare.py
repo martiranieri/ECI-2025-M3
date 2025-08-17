@@ -5,23 +5,21 @@ from torchvision import transforms
 import sys
 import os
 
-# Agregar carpeta padre al sys.path para poder importar codebase
+# para poder importar codebase
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from codebase.models.nns.v1 import Classifier
 
-# Definir dispositivo
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Cargar clasificador preentrenado
+# clasificador preentrenado
 classifier = Classifier(y_dim=10)
-checkpoint_path = 'classifier_mnist.pt'  # <-- ajusta esta ruta
+checkpoint_path = 'classifier_mnist.pt'
 checkpoint = torch.load(checkpoint_path, map_location=device)
 classifier.load_state_dict(checkpoint['model_state_dict'])
 classifier.to(device)
 classifier.eval()
 
-
-# Transformaciones para las imágenes
+# transformaciones para las imágenes
 transform = transforms.Compose([
     transforms.Grayscale(),
     transforms.Resize((28, 28)),
@@ -35,7 +33,7 @@ def clasificar_imgs(model, path):
         for filename in os.listdir(path):
             if filename.endswith(".png"):
                 img_path = os.path.join(path, filename)
-                img = Image.open(img_path).convert('L')  # asegurarse grayscale
+                img = Image.open(img_path).convert('L')
                 x = transform(img).unsqueeze(0).to(device)
                 x = x.view(x.size(0), -1)
                 pred = model(x).argmax(dim=1)

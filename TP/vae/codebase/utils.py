@@ -104,8 +104,8 @@ def log_normal_mixture(z, m, v):
     # Calcule la densidad de la mezcla de Gaussianas con pesos uniformes para cada muestra
     # en el batch
     ################################################################################
-    # expanda z para que coincida la dimensionalidad de m y v
-    z_dim = torch.unsqueeze(z, 1) # para poder usar el expand as
+    # hay que expandir z para que coincida la dimensión de m y v
+    z_dim = torch.unsqueeze(z, 1)
 
     z_expand = z_dim.expand_as(m)
 

@@ -59,7 +59,28 @@ class SSVAE(nn.Module):
         y = np.repeat(np.arange(self.y_dim), x.size(0))
         y = x.new(np.eye(self.y_dim)[y])
         x = ut.duplicate(x, self.y_dim)
+        
+        m, v = self.enc(x, y)
 
+        # KL_y
+        prior_y = torch.full_like(y_prob, 1.0 / self.y_dim)
+        kl_y = ut.kl_cat(y_prob, y_logprob, torch.log(prior_y)).mean()
+
+        # KL_z
+        kl_z_all = ut.kl_normal(m, v, self.z_prior[0], self.z_prior[1]) 
+        kl_z_all = kl_z_all.view(self.y_dim, -1).transpose(0, 1) 
+        kl_z = (y_prob * kl_z_all).sum(dim=1).mean()
+
+        # reconstrucción
+        z = ut.sample_gaussian(m, v) 
+        x_logits = self.dec(z, y)  
+        
+        # Bernoulli con logits
+        log_px = ut.log_bernoulli_with_logits(x, x_logits)
+        rec_all = -log_px.view(self.y_dim, -1).transpose(0, 1) 
+        rec = (y_prob * rec_all).sum(dim=1).mean()
+
+        nelbo = kl_y + kl_z + rec
         ################################################################################
         # Fin de modificación del código
         ################################################################################

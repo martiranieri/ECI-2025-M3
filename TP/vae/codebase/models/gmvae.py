@@ -46,10 +46,10 @@ class GMVAE(nn.Module):
         #
         # Las salidas deben ser todas escalares
         ################################################################################
-        # Prior aprendible
+        # prior aprendible
         m_prior, v_prior = ut.gaussian_parameters(self.z_pre, dim=1)
 
-        # Posterior del encoder
+        # posterior del encoder
         m_enc, v_enc = self.enc(x)
 
         # muestreo z
